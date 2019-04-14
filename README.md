@@ -14,7 +14,7 @@ with DSM model to refine the 3D building footprints. This Repository presents an
 The architecture is a conditional Generative Adversarial Neural Network which consists of a generator network which 
 consists of the so called W-net that admits two inputs: A panchromatic image and A stereo DSM, stacked with a discriminator that discriminates Real and Fake labels. <br>
 
-![Wnet-cGAN Architecture using depth and spectral information](https://github.com/0xzayd/Wnet-cGAN/blob/master/img/wnet_cgan.png)
+![Wnet-cGAN Architecture using depth and spectral information](https://github.com/0xzayd/Wnet-cGAN/blob/master/img/Wnet_cgan.png)
 
 ### Generator Network
 
