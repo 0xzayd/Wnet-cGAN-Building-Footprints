@@ -3,14 +3,18 @@
 ## Introduction
 
 Building outlines  are a relevant information for multiple tasks such as urban planning, disaster assessment 
-and cartographic analysis. DSM (Digital Surface Model) is useful for filtering the elevated objects (buildings,...) 
+and cartographic analysis. DSM (Digital Surface Model) depth information is useful for filtering the elevated objects (buildings,...) 
 from the objects close to the ground (streets, ...). [(Bittner et al., 2019)](https://arxiv.org/pdf/1903.03519.pdf) Combined very high resolution PAN imagery
-with DSM model to refine the 3D building footprints. This Repository presents an implementation of their model using the Keras Framework.
+with DSM model to refine the 3D building footprints. This Repository presents an implementation of their model using the Keras Framework. <br>
+<br>
+![Results obtained by [(Bittner et al., 2019)](https://arxiv.org/pdf/1903.03519.pdf)](https://github.com/0xzayd/Wnet-cGAN/blob/master/img/results.png)
 
 ## Architecture
 
 The architecture is a conditional Generative Adversarial Neural Network which consists of a generator network which 
-consists of the so called W-net that admits two inputs: A panchromatic image and A stereo DSM, stacked with a discriminator that discriminates Real and Fake labels.
+consists of the so called W-net that admits two inputs: A panchromatic image and A stereo DSM, stacked with a discriminator that discriminates Real and Fake labels. <br>
+
+![Wnet-cGAN Architecture using depth and spectral information](https://github.com/0xzayd/Wnet-cGAN/blob/master/img/wnet_cgan.png)
 
 ### Generator Network
 
@@ -23,7 +27,8 @@ The Discriminator is a neural network with 5 Convolutional layers that takes the
 
 ### Implementation
 
-In this implementation I train the generator and the discriminator sequentially. I shuffle the pairs (input DSM, Generated label) with the pairs (input DSM, Ground truth Label) and train the discriminator on that dataset. This has shown speed up and stability in training the discriminator.
+In this implementation I train the generator and the discriminator sequentially. I shuffle the pairs (input DSM, Generated label) with the pairs (input DSM, Ground truth Label) and train the discriminator on that dataset. This has shown speed up and stability in training the discriminator.<br>
+The hyperparamters can be changed as the original paper gives little information about the hyperparameters.
 
 
 
