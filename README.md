@@ -31,4 +31,32 @@ In this implementation I train the generator and the discriminator sequentially.
 The hyperparamters can be changed as the original paper gives little information about the hyperparameters.
 
 
+### Training
+
+training data (tiles of same size, recommended 256x256, single band tif files) must be put in 3 different folders: PAN, DSM and LABEL as shown in the schema below.
+
+```
+Training Folder
+               ├───DSM
+               │   └─── *.tif files
+               ├───PAN
+               │   └─── *.tif files
+               └───LABEL
+			       └─── *.tif files
+```
+
+to run the training, training folder must be passed as an argument to the train.py script:
+```
+python train.py --data ./training_folder
+```
+
+### Inference
+
+in order to test the pretrained model on a whole tif image, paths to the DSM, PAN input files as well as the weights file and the output file must be passed as arguments to the script predict.p:
+
+```
+python predict.py --dsm ./dsm.tif --pan ./pan.tif --weights ./model/weights_final.hdf5 --output ./output_predicted.tif
+```
+
+
 

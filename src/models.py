@@ -22,7 +22,7 @@ class Wnet_cgan:
                  n_labels=1):
         
         if K.image_data_format() == 'channels_first':
-            input_shape = (1, height, width) #define laebl_shape separately in case of multiple labels of roof
+            input_shape = (1, height, width) # 1 because PAN and DSM have only one channel
             concat_axis = 1
         else:
             input_shape = (height, width, 1)
@@ -59,8 +59,8 @@ class Wnet_cgan:
                                               discr_k_size,
                                               discr_inp_channels,
                                               'Discriminator')
-        print('Done')
-        # make Discriminator untrainable and copy it to 'frozen Discriminator' (like pyTorch's detach()?!)
+        print('Discriminator Built')
+        # make Discriminator untrainable and copy it to 'frozen Discriminator'
         make_trainable(self.discriminator, False)
 
         frozen_discriminator = Model(inputs=self.discriminator.inputs,
@@ -69,9 +69,9 @@ class Wnet_cgan:
         frozen_discriminator.compile(discr_opt,
                                      loss = 'binary_crossentropy',
                                      metrics=['accuracy'])
-        #print('Frozen and compiled')
+        print('Frozen discriminator and compiled')
         # build the wnet
-        #print('Build Wnet')
+        print('Build Wnet')
         self.wnet = Wnet(inp_dsm, 
                          inp_pan, 
                          wnet_block_list, 
@@ -79,32 +79,30 @@ class Wnet_cgan:
                          wnet_activation, 
                          self.n_labels, 
                          name='Wnet')
-
+      
         #compile the wnet
         self.wnet.compile(wnet_opt,
                           loss = 'binary_crossentropy',
-                          metrics=['accuracy'])  # CHANGE TO mIoU !!!!!!!!
+                          metrics=['accuracy'])  # maybe change to mIoU?
 
-        #print('Compiled Wnet') 
-        # get the wnet prediction
+        print('Wnet Built and Compiled') 
+        #get the wnet prediction
         pred = self.wnet([inp_dsm, inp_pan])
-        #print('got pred from Wnet')
-        # input the prediction into the frozen discriminator and get the probability fake/real
+        # input the prediction into the frozen discriminator and get the probability of realness
         prob = frozen_discriminator([inp_dsm, pred])
-        #print('got prob from frozen Discr')
         # stack wnet and discriminator to form the Wnet-CGAN
-        #print('stacking the two')
+        print('stacking the two')
         self.wnet_cgan = Model(inputs=[inp_dsm, inp_pan, inp_label],
                                outputs=[pred, prob],
                                name='WNet-CGAN')
-        #print('stacked')
+        print('stacked')
         # compile it
-        #print('compiling the stcaked')
+        print('compiling the stcaked')
         self.wnet_cgan.compile(wnet_opt,
                                loss=['binary_crossentropy', 'binary_crossentropy'],
                                loss_weights=[1., lambda_],
                                metrics=['accuracy'])
-        #print('compiled')
+        print('compiled')
         #print(wnet_cgan.summary())
 
         # compile the discriminator
@@ -114,10 +112,11 @@ class Wnet_cgan:
                                    metrics=['accuracy'])
 
         #print(self.discriminator.summary())
+     
             
     def fit_wnet_cgan(self,
-                      X,
-                      Y,
+                      train_generator,
+                      valid_generator,
                       adv_epochs=10,
                       adv_steps_epoch=100,
                       gen_epochs=20,
@@ -125,48 +124,32 @@ class Wnet_cgan:
                       validation_steps=4,
                       n_rounds=10):
 
-        discr_callbacks = self.build_callbacks()
-        gen_callbacks = self.build_callbacks()
+        discr_callbacks = self.build_callbacks(monitor='val_acc', phase='discr')
+        gen_callbacks = self.build_callbacks(monitor='val_acc', phase='gen')
               
         for i in range(n_rounds):
-            #train discriminator first
-            #self.discriminator.fit(x=discr_X, 
-                                   #y=discr_Y,
-                                   #epochs=(i+1)*adv_epochs,
-                                   #callbacks=discr_callbacks,
-                                   #validation_split=0.2,
-                                   #validation_steps=validation_steps,
-                                   #shuffle=True,
-                                   #steps_per_epoch=adv_steps_epoch,
-                                   #initial_epoch=i*adv_epochs,
-                                   #verbose=0)
-            
-            self.wnet_cgan.fit(x=X,
-                               y=Y,
+            #Train Generator first
+            train_generator.phase='gen'
+            valid_generator.phase='gen'
+            self.wnet_cgan.fit_generator(generator=train_generator,
+                               validation_data=valid_generator,
                                epochs=(i+1)*gen_epochs,
                                callbacks=gen_callbacks,
-                               validation_split=0.2,
                                validation_steps=validation_steps,
                                shuffle=True,
                                steps_per_epoch=gen_steps_epoch,
                                initial_epoch=i*gen_epochs,
                                verbose=1)
             
-            # Sub training-dataset for disciminator
-            pred = self.wnet.predict([X[0],X[1]])
-            discr_X_1, discr_X_2 = np.concatenate((X[0],X[0]), axis=0), np.concatenate((X[2],pred), axis=0)
-            discr_Y = np.concatenate((Y[1],np.ones(shape=(len(pred),1))),axis=0)
-            
-            discr_X_1, discr_X2, discr_Y = shuffle(discr_X_1, discr_X_2, discr_Y, random_state=42)
-            discr_X = [discr_X_1, discr_X_2]
-            
+            self.wnet._make_predict_function()
+            train_generator.pred_fn = valid_generator.pred_fn = self.wnet.predict
+            train_generator.phase = valid_generator.phase = 'discr'
             
             # train discriminator last
-            self.discriminator.fit(x=discr_X, 
-                                   y=discr_Y,
+            self.discriminator.fit_generator(generator=train_generator, 
+                                   validation_data=valid_generator,
                                    epochs=(i+1)*adv_epochs,
                                    callbacks=discr_callbacks,
-                                   validation_split=0.2,
                                    validation_steps=validation_steps,
                                    shuffle=True,
                                    steps_per_epoch=adv_steps_epoch,
