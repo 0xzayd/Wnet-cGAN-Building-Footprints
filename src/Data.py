@@ -1,3 +1,6 @@
+import glob
+import numpy as np
+
 class Data:
     
     def __init__(self, path, random=False):
@@ -48,7 +51,7 @@ class Data:
         else:
             return DSM_out, PAN_out, LABEL_out
            
-    def split_trn_vld_tst(self, vld_rate=0.2, tst_rate=0.05, random=True, seed=10):
+    def split_trn_vld_tst(self, vld_rate=0.2, tst_rate=0.0, random=True, seed=10):
         np.random.seed(seed)
 
         num = len(self.DSM)

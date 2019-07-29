@@ -1,4 +1,4 @@
-from utils import make_trainable
+from src.utils import make_trainable
 
 import keras
 

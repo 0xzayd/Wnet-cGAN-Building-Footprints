@@ -1,3 +1,9 @@
+import keras
+import numpy as np
+import rasterio
+from sklearn.utils import shuffle
+
+
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
     def __init__(self, DSM_IDs,

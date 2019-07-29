@@ -1,4 +1,7 @@
-from networks import Wnet, DiscriminatorNet
+import os
+
+from src.networks import Wnet, DiscriminatorNet
+from src.utils import make_trainable
 
 import keras
 
@@ -156,23 +159,40 @@ class Wnet_cgan:
                                    initial_epoch=i*adv_epochs,
                                    verbose=0)
             
-            
-    def build_callbacks(self, log_dir = None):
+    def build_callbacks(self, use_tfboard=True, monitor=None, phase=None, save=False):
+        
+        if phase == 'gen':
+            path = './results/gen'
+        elif phase == 'discr':
+            path = './results/discr'
 
-        # Tensorboard
-        log_dir = './logs'
-        tensorboard = TrainValTensorBoard(log_dir = log_dir)
-        path = './results'
-        
-        
         # Model Checkpoints
-        filepath=path + "/weights-{epoch:02d}-{val_acc:.2f}.hdf5"
-        checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, save_weights_only=True, mode='max')
+        if monitor is None:
+            callbackList = []
+        else:
+            if not os.path.exists(path):
+                os.makedirs(path)
+            filepath=path+'/weights-{epoch:02d}.hdf5'
+            checkpoint = ModelCheckpoint(filepath,
+                                         monitor=monitor,
+                                         verbose=1,
+                                         save_best_only=save,
+                                         save_weights_only=True,
+                                         mode='max')
 
-        # Bring all the callbacks together into a python list
-        self.callbackList = [tensorboard, checkpoint]        
-            
-    
+            # Bring all the callbacks together into a python list
+            callbackList = [checkpoint]
+                    
+        # Tensorboard
+        if use_tfboard:
+            if phase is None:
+                tfpath = './logs'
+            else:
+                tfpath = './logs/{0}'.format(phase)
+            tensorboard = TrainValTensorBoard(log_dir=tfpath)
+            callbackList.append(tensorboard)
+        return callbackList
+        
 class TrainValTensorBoard(TensorBoard):
     def __init__(self, log_dir='./logs', hist_freq=0, **kwargs):
         # Make the original `TensorBoard` log to a subdirectory 'training'

@@ -7,9 +7,11 @@ import ogr
 import gdal
 from osgeo import gdal_array
 
+from sklearn.preprocessing import MinMaxScaler
+
 from src.models import *
 from src.networks import *
-from src.data import Data
+from src.Data import Data
 from src.utils import *
 
 parser = argparse.ArgumentParser(description='arguments input')
@@ -28,8 +30,9 @@ weights = args.weights
 output = args.output
 
 # padding of 16px here to avoid artefacts
-pad = (16,16)
-shape = (224,224) # 256 - 2 * 16
+pad = (64,64)
+shape = (128,128) # 256 - 2 * 16
+img_height, img_width = 256,256
 
 # Processing input
 ary_dsm = np.moveaxis(rasterio.open(dsm_path).read(),0,-1)
@@ -47,9 +50,8 @@ w_pad = (pad[1],padW - ary_dsm.shape[1] + pad[1])
 padded_ary_dsm = np.pad(ary_dsm, pad_width=(h_pad, w_pad, (0, 0)), mode='symmetric')
 padded_ary_pan = np.pad(ary_pan, pad_width=(h_pad, w_pad, (0, 0)), mode='symmetric')
 
-W_dsm, _ = ary_to_tiles_forward(padded_ary_dsm, ary_dsm, pad=pad, shape=shape)
-W_pan, _ = ary_to_tiles_forward(padded_ary_pan, ary_pan, pad=pad, shape=shape)
-
+W_dsm, _ = ary_to_tiles_forward(padded_ary_dsm, ary_dsm, pad=pad, shape=shape, scale=True)
+W_pan, _ = ary_to_tiles_forward(padded_ary_pan, ary_pan, pad=pad, shape=shape, scale=False)
 
 
 # Inference in NN
@@ -72,15 +74,18 @@ print('Finished predict on {0} tiles of shape ({1},{2}) for: {4}'.format(*W_hat_
 
 
 # processing into tif file
-W_hat_ary = tiles_to_ary_forward(stacked_ary=W_hat_test, pad=pad, padded_ary_shape_padded=padded_ary_dsm.shape[:2])
+W_hat_ary = tiles_to_ary_forward(stacked_ary=W_hat_test, pad=pad, Gary_shape_padded=padded_ary_dsm.shape[:2])
+
 
 if output != None:
     meta = rasterio.open(pan_path).meta.copy()
     meta.update({'count': 1,
                 'dtype':'float32'})
+       
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    ascolumns = W_hat_ary.reshape(-1, 1)
+    t = scaler.fit_transform(ascolumns)
+    pp_ = t.reshape(W_hat_ary.shape)
     
-    sc = MinMaxScaler(copy=True, feature_range=(0, 1)).fit(W_hat_ary[:,:,0])
-    pp_ = sc.transform(W_hat_ary[:,:,0])
- 
     with rasterio.open(output, 'w', **meta) as rr:
-        rr.write(pp_[pad[0]:meta['height']+pad[0], pad[1]:meta['width']+pad[1]].astype(np.float32),1)
+        rr.write(pp_[:pad[0]-h_pad[1], :pad[1]-w_pad[1],0].astype(np.float32),1)

@@ -2,7 +2,8 @@ import argparse
 
 from src.models import *
 from src.networks import *
-from src.data import Data
+from src.Data import Data
+from src.DataGeneration import *
 
 parser = argparse.ArgumentParser(description='arguments input')
 parser.add_argument('-d','--data', type=str, help='Training data folder with subfolders: DSM, PAN, LABEL', required=True)
@@ -41,4 +42,4 @@ myModel.build_wnet_cgan([64,64,128,128],
                         lambda_=1e-1)
 
 myModel.fit_wnet_cgan(train_gen, valid_gen, adv_epochs=50, gen_epochs=100,
-                     adv_steps_epoch=50, gen_steps_epoch=100, n_rounds=50)
+                     adv_steps_epoch=50, gen_steps_epoch=100, n_rounds=80)
